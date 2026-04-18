@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="f802d761-6720-447b-a484-21d8edc00caf" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/projet_mqtt/iot_backend/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/projet_mqtt/iot_backend/app.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/projet_mqtt/iot_frontend/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/projet_mqtt/iot_frontend/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/projet_mqtt/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/projet_mqtt/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wifi/mode_access_station/Mode_Station.py" beforeDir="false" afterPath="$PROJECT_DIR$/wifi/mode_access_station/Mode_Station.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "ChebbiYahya"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/ChebbiYahya/ESP32-MQTT-WiFi-Manager-IoT-Backend-to-MongoDB-NodeJS-Flutter.git",
+    "accountId": "763238a9-31d9-4db6-ae0e-8084db5c1d95"
+  }
+}]]></component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="39kA2kw2ZddnlOhOSGZh9FteO2Q" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.27397.103" />
+        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-IU-252.27397.103" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f802d761-6720-447b-a484-21d8edc00caf" name="Changes" comment="" />
+      <created>1771229490531</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1771229490531</updated>
+      <workItem from="1771229491804" duration="116000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
