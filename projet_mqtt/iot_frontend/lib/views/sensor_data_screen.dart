@@ -91,6 +91,13 @@ class _SensorDataScreenState extends State<SensorDataScreen> {
                 icon: const Icon(Icons.refresh),
                 label: const Text("Reconnect MQTT"),
               ),
+              const SizedBox(height: 10),
+              Switch(
+                value: controller.relayEnabled.value,
+                onChanged: (bool value) {
+                  controller.publishRelayState(value);
+                },
+              ),
             ],
           );
         }),

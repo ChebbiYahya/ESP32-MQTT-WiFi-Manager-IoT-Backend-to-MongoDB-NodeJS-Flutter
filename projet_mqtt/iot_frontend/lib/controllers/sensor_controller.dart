@@ -3,21 +3,23 @@ import 'dart:convert';
 
 import 'package:get/get.dart';
 import 'package:iot_frontend/models/sensor_data_model.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
-import '../utils/constants/app_constants.dart';
 import 'package:mqtt_client/mqtt_client.dart' as mqtt;
+import 'package:mqtt_client/mqtt_server_client.dart';
+
+import '../utils/constants/app_constants.dart';
 
 // Controleur GetX responsable de la connexion MQTT et des donnees affichees.
 class SensorController extends GetxController {
   // Raccourci pratique pour recuperer l'instance deja injectee dans GetX.
   static SensorController get instance => Get.find();
 
-  // Client MQTT utilise pour se connecter au broker.
+  // Client MQTT utilise pour se connecter au broker et publier/souscrire aux topics.
   MqttServerClient? client;
 
-  /// Etat observable qui declenche automatiquement la mise a jour de l'UI.
+  /// Etats observables lies aux donnees capteurs, au relais et a la connexion.
   final RxString temperature = 'Loading...'.obs;
   final RxString humidity = 'Loading...'.obs;
+  final RxBool relayEnabled = false.obs;
   final RxBool isConnected = false.obs;
   final RxString errorMessage = ''.obs;
 
@@ -27,107 +29,146 @@ class SensorController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Lance la connexion des l'initialisation du controleur.
+    // Lance automatiquement la connexion MQTT au demarrage du controller.
     connectMQTT();
   }
 
   Future<void> connectMQTT() async {
     try {
-      // Cree le client avec l'adresse du broker et l'identifiant de l'application.
-      client = MqttServerClient(
-        AppConstants.mqttServer, // - l'adresse du broker (serveur MQTT)
-        AppConstants
-            .mqttClientId, // - un identifiant unique pour cette application (clientId)
-      );
+      // Prepare l'objet client avec tous les parametres necessaires.
+      configureClient();
 
-      // Configure les parametres de base de la session MQTT.
-      client!.port = AppConstants
-          .mqttPort; // Configuration du port de communication MQTT (souvent 1883)
-      client!.keepAlivePeriod =
-          20; // Définition du keepAlive (intervalle en secondes pour maintenir la connexion active)
-      client!.logging(
-        on: false,
-      ); // Activation/désactivation des logs internes du client MQTT
-      client!.onDisconnected =
-          onDisconnected; // Callback appelée automatiquement lorsque la connexion est interrompue
-
-      // Prepare le message de connexion envoye au broker.
-      final connMess = mqtt.MqttConnectMessage()
-          .withClientIdentifier(
-            AppConstants.mqttClientId,
-          ) // Identifiant du client envoyé au broker
-          .withWillQos(
-            mqtt.MqttQos.atMostOnce,
-          ); // QoS du message "Last Will" (message envoyé si le client crash)
-
-      client!.connectionMessage =
-          connMess; // Affectation du message de connexion au client MQTT
-
-      // Tente d'etablir la connexion reseau avec le broker MQTT.
+      // Demande la connexion au broker MQTT.
       await client!.connect();
 
-      // Verifie que la connexion est bien active avant de s'abonner au topic.
-      if (client!.connectionStatus?.state !=
-          mqtt.MqttConnectionState.connected) {
+      // Si la connexion n'est pas etablie, on sort proprement.
+      if (!isClientConnected()) {
         errorMessage.value =
-            'MQTT non connectÃ©: ${client!.connectionStatus?.state}';
+            'MQTT non connecte: ${client!.connectionStatus?.state}';
         client!.disconnect();
         return;
       }
 
-      isConnected.value =
-          true; // Si la connexion est réussie → on met à jour l'état
-      errorMessage.value = ''; // Réinitialisation du message d'erreur
-
-      // Souscription au topic MQTT où l'ESP32 envoie les données capteurs
-      client!.subscribe(AppConstants.mqttTopic, mqtt.MqttQos.atMostOnce);
-
-      // Traite chaque message entrant recu depuis le broker.
-      _mqttSubscription = client!.updates!.listen((event) {
-        try {
-          // Extrait le message MQTT brut depuis l'evenement.
-          final mqtt.MqttPublishMessage recMessage =
-              event[0].payload as mqtt.MqttPublishMessage;
-
-          // Convertit les octets du payload en chaine JSON lisible.
-          final payload = mqtt.MqttPublishPayload.bytesToStringAsString(
-            recMessage.payload.message,
-          );
-
-          // Transforme le JSON en objet Dart exploitable par l'application.
-          final data = jsonDecode(payload) as Map<String, dynamic>;
-          final sensorData = SensorDataModel.fromJson(data);
-
-          // Met a jour les valeurs reactives observees par l'interface.
-          temperature.value = sensorData.temperature.toString();
-          humidity.value = sensorData.humidity.toString();
-        } catch (e) {
-          errorMessage.value = 'Erreur parsing MQTT: $e';
-        }
-      });
+      // Connexion reussie: on met a jour l'etat puis on active la reception.
+      isConnected.value = true;
+      errorMessage.value = '';
+      subscribeToSensorData();
     } catch (e) {
-      // Capture les erreurs de connexion ou de configuration MQTT.
+      // Toute erreur de connexion ou de configuration arrive ici.
       errorMessage.value = 'MQTT connection failed: $e';
       isConnected.value = false;
       client?.disconnect();
     }
   }
 
+  void configureClient() {
+    // Cree le client MQTT en utilisant l'adresse du broker et l'identifiant Flutter.
+    client = MqttServerClient(
+      AppConstants.mqttServer,
+      AppConstants.mqttClientId,
+    );
+
+    // Parametres de base de la connexion MQTT.
+    client!.port = AppConstants.mqttPort;
+    client!.keepAlivePeriod = 20;
+    client!.logging(on: false);
+    client!.onDisconnected = onDisconnected;
+
+    // Message/env de connexion transmis au broker lors du connect().
+    client!.connectionMessage = mqtt.MqttConnectMessage()
+        .withClientIdentifier(AppConstants.mqttClientId)
+        .withWillQos(mqtt.MqttQos.atMostOnce);
+  }
+
+  bool isClientConnected() {
+    // Retourne true seulement si le broker confirme une connexion active.
+    return client?.connectionStatus?.state == mqtt.MqttConnectionState.connected;
+  }
+
+  void subscribeToSensorData() {
+    // Souscrit au topic des donnees capteurs publiees par l'ESP32.
+    client?.subscribe(AppConstants.mqttReceiverTopic, mqtt.MqttQos.atMostOnce);
+
+    // Ecoute en continu les messages entrants recus sur les topics souscrits.
+    _mqttSubscription = client?.updates?.listen(handleSensorMessage);
+  }
+
+  void handleSensorMessage(
+    List<mqtt.MqttReceivedMessage<mqtt.MqttMessage?>>? event,
+  ) {
+    // Protection simple: on ignore les evenements vides ou nuls.
+    if (event == null || event.isEmpty) {
+      return;
+    }
+
+    try {
+      // Recupere le message MQTT brut recu depuis le broker.
+      final recMessage = event[0].payload as mqtt.MqttPublishMessage;
+
+      // Convertit le payload binaire en texte JSON lisible.
+      final payload = mqtt.MqttPublishPayload.bytesToStringAsString(
+        recMessage.payload.message,
+      );
+
+      // Decode le JSON et construit l'objet metier des donnees capteurs.
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final sensorData = SensorDataModel.fromJson(data);
+
+      // Met a jour les valeurs observees automatiquement par l'interface.
+      temperature.value = sensorData.temperature.toString();
+      humidity.value = sensorData.humidity.toString();
+    } catch (e) {
+      // Si le JSON recu est invalide ou inattendu, on remonte l'erreur.
+      errorMessage.value = 'Erreur parsing MQTT: $e';
+    }
+  }
+
   void onDisconnected() {
-    // Maintient l'etat local coherent si le broker coupe la connexion.
+    // Synchronise l'etat local lorsque la connexion MQTT tombe.
     isConnected.value = false;
     errorMessage.value = 'MQTT disconnected';
     print('MQTT disconnected');
   }
 
   Future<void> reconnectMQTT() async {
-    // Repart proprement d'une session vide avant de se reconnecter.
+    // Ferme proprement la session actuelle avant de lancer une nouvelle connexion.
     await disconnectMQTT();
     await connectMQTT();
   }
 
+  Future<void> publishRelayState(bool isEnabled) async {
+    // On bloque la publication si le client n'est pas pret ou deconnecte.
+    if (client == null || !isConnected.value || !isClientConnected()) {
+      errorMessage.value = 'MQTT non connecte';
+      return;
+    }
+
+    try {
+      // Construit le JSON attendu par l'ESP32: {"relay":1} ou {"relay":0}.
+      final payload = jsonEncode({'relay': isEnabled ? 1 : 0});
+
+      // Le payload builder transforme la chaine JSON en message MQTT publiable.
+      final builder = mqtt.MqttClientPayloadBuilder();
+      builder.addString(payload);
+
+      // Envoie l'etat du relais sur le topic dedie aux actionneurs.
+      client!.publishMessage(
+        AppConstants.mqttSenderTopic,
+        mqtt.MqttQos.atMostOnce,
+        builder.payload!,
+      );
+
+      // Si la publication reussit, on synchronise l'etat local du switch.
+      relayEnabled.value = isEnabled;
+      errorMessage.value = '';
+    } catch (e) {
+      // Capture les erreurs de publication MQTT.
+      errorMessage.value = 'Erreur publication MQTT: $e';
+    }
+  }
+
   Future<void> disconnectMQTT() async {
-    // Annule l'ecoute du flux puis ferme la connexion MQTT.
+    // Arrete l'ecoute des messages puis ferme la connexion au broker.
     await _mqttSubscription?.cancel();
     client?.disconnect();
     isConnected.value = false;
@@ -135,7 +176,7 @@ class SensorController extends GetxController {
 
   @override
   void onClose() {
-    // Libere les ressources quand le controleur est detruit.
+    // Nettoyage final quand le controller est detruit par Flutter/GetX.
     _mqttSubscription?.cancel();
     client?.disconnect();
     super.onClose();
